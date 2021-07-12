@@ -31,6 +31,9 @@ from kedro_tutorial.hooks import ProjectHooks
 
 # Instantiate and list your project hooks here
 HOOKS = (ProjectHooks(),)
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 # List the installed plugins for which to disable auto-registry
 # DISABLE_HOOKS_FOR_PLUGINS = ("kedro-viz",)
