@@ -26,6 +26,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 def _is_true(x):
@@ -55,7 +56,9 @@ def preprocess_companies(companies: pd.DataFrame) -> pd.DataFrame:
     """
     companies["iata_approved"] = _is_true(companies["iata_approved"])
     companies["company_rating"] = _parse_percentage(companies["company_rating"])
-    return companies
+    fig, axes = plt.subplots()
+    companies["total_fleet_count"].hist(bins=50, ax=axes)
+    return companies, companies.to_dict()
 
 
 def preprocess_shuttles(shuttles: pd.DataFrame) -> pd.DataFrame:

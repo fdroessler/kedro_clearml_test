@@ -57,8 +57,10 @@ shuttles:
   layer: raw
 
 preprocessed_companies:
-  type: pandas.CSVDataSet
-  filepath: data/02_intermediate/preprocessed_companies.csv
+  type: kedro_tutorial.io.clearml_artifact_dataset.ClearMLArtifactDataSet
+  data_set:
+    type: pandas.CSVDataSet
+    filepath: data/02_intermediate/preprocessed_companies.csv
   layer: intermediate
 
 preprocessed_shuttles:
@@ -72,7 +74,9 @@ model_input_table:
   layer: primary
 
 regressor:
-  type: pickle.PickleDataSet
-  filepath: data/06_models/regressor.pickle
-  versioned: true
+  type: kedro_tutorial.io.clearml_artifact_dataset.ClearMLArtifactDataSet
+  data_set:
+    type: pickle.PickleDataSet
+    filepath: data/06_models/regressor.pickle
+    versioned: true
   layer: models

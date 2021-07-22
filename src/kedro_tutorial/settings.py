@@ -27,11 +27,12 @@
 # limitations under the License.
 
 """Project settings."""
-from kedro_tutorial.hooks import ProjectHooks
+from kedro_tutorial.hooks import ProjectHooks, ClearmlPipelinehook, ClearmlNodeHook
 
 # Instantiate and list your project hooks here
-HOOKS = (ProjectHooks(),)
+HOOKS = (ProjectHooks(), ClearmlPipelinehook(), ClearmlNodeHook())
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 

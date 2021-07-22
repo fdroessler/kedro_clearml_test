@@ -36,7 +36,7 @@ def create_pipeline(**kwargs):
             node(
                 func=preprocess_companies,
                 inputs="companies",
-                outputs="preprocessed_companies",
+                outputs=["preprocessed_companies", "companies_json"],
                 name="preprocess_companies_node",
             ),
             node(

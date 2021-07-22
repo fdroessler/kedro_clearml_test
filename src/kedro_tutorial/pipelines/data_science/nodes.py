@@ -32,6 +32,7 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
+from clearml import Logger
 
 
 def split_data(data: pd.DataFrame, parameters: Dict) -> Tuple:
@@ -78,5 +79,7 @@ def evaluate_model(
     """
     y_pred = regressor.predict(X_test)
     score = r2_score(y_test, y_pred)
+    clearml_logger = Logger.current_logger()
+    clearml_logger.report_scalar("R^2", series="metric", value=score, iteration=None)
     logger = logging.getLogger(__name__)
     logger.info("Model has a coefficient R^2 of %.3f on test data.", score)
