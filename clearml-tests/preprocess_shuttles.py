@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tempfile import mkdtemp
 from pathlib import Path
+import openpyxl
 
 # create an dataset experiment
 task = Task.init(
