@@ -5,38 +5,28 @@ from clearml.automation.controller import PipelineController
 # Connecting ClearML with the current process,
 # from here on everything is logged automatically
 task = Task.init(
-    project_name="examples",
-    task_name="pipeline demo",
+    project_name="kedro_tutorial_clearml",
+    task_name="DE pipeline",
     task_type=Task.TaskTypes.controller,
     reuse_last_task_id=False,
 )
 
-pipe = PipelineController(default_execution_queue="default", add_pipeline_tags=False)
+pipe = PipelineController(default_execution_queue="default")
 pipe.add_step(
-    name="stage_data",
-    base_task_project="examples",
-    base_task_name="pipeline step 1 dataset artifact",
+    name="companies",
+    base_task_project="kedro_tutorial_clearml/de",
+    base_task_name="preprocess_companies",
 )
 pipe.add_step(
-    name="stage_process",
-    parents=[
-        "stage_data",
-    ],
-    base_task_project="examples",
-    base_task_name="pipeline step 2 process dataset",
-    parameter_override={
-        "General/dataset_url": "${stage_data.artifacts.dataset.url}",
-        "General/test_size": 0.25,
-    },
+    name="shuttles",
+    base_task_project="kedro_tutorial_clearml/de",
+    base_task_name="preprocess_shuttles",
 )
 pipe.add_step(
-    name="stage_train",
-    parents=[
-        "stage_process",
-    ],
-    base_task_project="examples",
-    base_task_name="pipeline step 3 train model",
-    parameter_override={"General/dataset_task_id": "${stage_process.id}"},
+    name="input_table",
+    parents=["companies", "shuttles"],
+    base_task_project="kedro_tutorial_clearml/de",
+    base_task_name="create_model_input_table",
 )
 
 # Starting the pipeline (in the background)

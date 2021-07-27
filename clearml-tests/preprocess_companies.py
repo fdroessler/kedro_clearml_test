@@ -2,6 +2,7 @@ from clearml import Task, Dataset
 import pandas as pd
 import matplotlib.pyplot as plt
 from tempfile import mkdtemp
+from pathlib import Path
 
 # create an dataset experiment
 task = Task.init(
@@ -9,7 +10,7 @@ task = Task.init(
 )
 
 # only create the task, we will actually execute it later
-task.execute_remotely()
+# task.execute_remotely()
 
 logger = task.get_logger()
 
@@ -26,8 +27,9 @@ def _parse_percentage(x):
 
 tdata = Dataset.get(dataset_project="kedro_tutorial_clearml/data", dataset_name="raw")
 tdata_folder = tdata.get_local_copy()
+data_path = list(Path(tdata_folder).glob("*.companies.csv"))[0]
 
-companies = pd.read_csv(tdata_folder + "/companies.csv")
+companies = pd.read_csv(data_path)
 
 companies["iata_approved"] = _is_true(companies["iata_approved"])
 companies["company_rating"] = _parse_percentage(companies["company_rating"])
@@ -41,7 +43,7 @@ task.upload_artifact("companies", artifact_object=companies)
 
 with_feature = Dataset.create(
     "name does not matter - the task is the feature",
-    dataset_project="kedro_tutorial_clearml/FeatureStore",
+    dataset_project="kedro_tutorial_clearml/de",
     parent_datasets=[tdata.id],
     use_current_task=True,
 )  # This boolean is the main point actually!!!
@@ -49,7 +51,7 @@ with_feature = Dataset.create(
 new_folder = with_feature.get_mutable_local_copy(mkdtemp())
 print(f"new_folder is:{new_folder}")
 # overwrite with new train df (with the added)
-companies.to_csv(new_folder + "/train.csv", index=False)
+companies.to_csv(new_folder + "/companies.csv", index=False)
 with_feature.sync_folder(new_folder)
 with_feature.upload()
 with_feature.finalize()

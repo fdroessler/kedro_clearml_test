@@ -1,58 +1,51 @@
-import joblib
-import matplotlib.pyplot as plt
-import numpy as np
-from sklearn.linear_model import LogisticRegression
+from clearml import Task, Dataset
+from pathlib import Path
+import pandas as pd
 
-from clearml import Task
+from tempfile import mkdtemp
 
 
 # Connecting ClearML with the current process,
 # from here on everything is logged automatically
-task = Task.init(project_name="examples", task_name="pipeline step 3 train model")
+task = Task.init(
+    project_name="kedro_tutorial_clearml/de", task_name="create_model_input_table"
+)
 
-# Arguments
-args = {
-    "dataset_task_id": "REPLACE_WITH_DATASET_TASK_ID",
-}
-task.connect(args)
+companies_task = Task.get_task(
+    project_name="kedro_tutorial_clearml/de", task_name="preprocess_companies"
+)
+shuttle_task = Task.get_task(
+    project_name="kedro_tutorial_clearml/de", task_name="preprocess_shuttles"
+)
+tdata = Dataset.get(dataset_project="kedro_tutorial_clearml/data", dataset_name="raw")
+tdata_folder = tdata.get_local_copy()
+data_path = list(Path(tdata_folder).glob("*.reviews.*"))[0]
 
-# only create the task, we will actually execute it later
-task.execute_remotely()
+reviews = pd.read_csv(data_path)
 
-print("Retrieving Iris dataset")
-dataset_task = Task.get_task(task_id=args["dataset_task_id"])
-X_train = dataset_task.artifacts["X_train"].get()
-X_test = dataset_task.artifacts["X_test"].get()
-y_train = dataset_task.artifacts["y_train"].get()
-y_test = dataset_task.artifacts["y_test"].get()
-print("Iris dataset loaded")
+preprocess_shuttles = pd.read_csv(shuttle_task.artifacts["data"].get())
+preprocess_companies = pd.read_csv(companies_task.artifacts["data"].get())
 
-model = LogisticRegression(solver="liblinear", multi_class="auto")
-model.fit(X_train, y_train)
+rated_shuttles = preprocess_shuttles.merge(reviews, left_on="id", right_on="shuttle_id")
+model_input_table = rated_shuttles.merge(
+    preprocess_companies, left_on="company_id", right_on="id"
+)
+model_input_table = model_input_table.dropna()
 
-joblib.dump(model, "model.pkl", compress=True)
+# add and upload local file containing our toy dataset
+task.upload_artifact("model_input_table", artifact_object=model_input_table)
 
-loaded_model = joblib.load("model.pkl")
-result = loaded_model.score(X_test, y_test)
+with_feature = Dataset.create(
+    "name does not matter - the task is the feature",
+    dataset_project="kedro_tutorial_clearml/de",
+    parent_datasets=[companies_task.id, shuttle_task.id, tdata.id],
+    use_current_task=True,
+)  # This boolean is the main point actually!!!
 
-print("model trained & stored")
-
-x_min, x_max = X_test[:, 0].min() - 0.5, X_test[:, 0].max() + 0.5
-y_min, y_max = X_test[:, 1].min() - 0.5, X_test[:, 1].max() + 0.5
-h = 0.02  # step size in the mesh
-xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-plt.figure(1, figsize=(4, 3))
-
-plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, edgecolors="k", cmap=plt.cm.Paired)
-plt.xlabel("Sepal length")
-plt.ylabel("Sepal width")
-
-plt.xlim(xx.min(), xx.max())
-plt.ylim(yy.min(), yy.max())
-plt.xticks(())
-plt.yticks(())
-
-plt.title("Iris Types")
-plt.show()
-
-print("Done")
+new_folder = with_feature.get_mutable_local_copy(mkdtemp())
+print(f"new_folder is:{new_folder}")
+# overwrite with new train df (with the added)
+model_input_table.to_csv(new_folder + "/model_input_table.csv", index=False)
+with_feature.sync_folder(new_folder)
+with_feature.upload()
+with_feature.finalize()
