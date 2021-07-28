@@ -91,6 +91,7 @@ class ClearMLArtifactDataSet(AbstractVersionedDataSet):
                         # TODO: If it is a "viewable" object upload it directly otherwise upload the saved file
                         task.upload_artifact(Path(local_path).name, local_path)
                         task.upload_artifact(f"rep_{Path(local_path).stem}", data)
+                        task.close()
 
         # rename the class
         parent_name = data_set.__name__

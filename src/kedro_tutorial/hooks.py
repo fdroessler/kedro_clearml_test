@@ -170,6 +170,26 @@ class ClearmlNodeHook:
             )
         task.connect(params_inputs)
 
+    @hook_impl
+    def after_node_run(
+        self,
+        node: Node,
+        catalog: DataCatalog,
+        inputs: Dict[str, Any],
+        is_async: bool,
+        run_id: str,
+    ) -> None:
+        # here we check if we have a ClearML dataset, if that is the case we keep
+        # the current task open so that the artifact can be uploaded. In this case
+        # the save function of the clearml artifact class will take care of closing the task
+        datasets = [getattr(catalog.datasets, out) for out in node.outputs]
+        has_clearml_artifact_dataset = any(
+            ["clearml" in d.__module__ for d in datasets]
+        )
+        if not has_clearml_artifact_dataset:
+            task = Task.current_task()
+            task.close()
+
 
 def _generate_kedro_command(
     tags, node_names, from_nodes, to_nodes, from_inputs, load_versions, pipeline_name

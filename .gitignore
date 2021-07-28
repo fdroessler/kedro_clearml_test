@@ -1,3 +1,5 @@
+**/*.csv
+
 ##########################
 # KEDRO PROJECT
 
@@ -155,3 +157,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+data/01_raw/companies.csv
