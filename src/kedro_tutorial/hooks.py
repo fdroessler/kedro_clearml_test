@@ -91,9 +91,8 @@ class ClearmlPipelinehook:
         """
         # project name should be read from config file
         task = Task.init(
-            project_name="kedro_test",
-            task_name="pipeline",
-            task_type=Task.TaskTypes.controller,
+            project_name="kedro_track_all",
+            task_name="full_pipeline",
             reuse_last_task_id=False,
         )
         task.add_tags([f"{k}: {v}" for k, v in run_params.items() if v])
@@ -108,19 +107,6 @@ class ClearmlPipelinehook:
             pipeline_name=run_params["pipeline_name"],
         )
         task.add_tags([f"kedro_command: {kedro_command}"])
-        task.close()
-
-    @hook_impl
-    def after_pipeline_run(self, run_params, run_result, pipeline, catalog):
-        task = Task.get_task(project_name="kedro_test", task_name="pipeline")
-        pipe = PipelineController()
-        for k, v in pipeline.node_dependencies.items():
-            pipe.add_step(
-                name=k.name.rsplit("_node", 1)[0],
-                parents=[vv.name for vv in v],
-                base_task_project="kedro_test",
-                base_task_name=k.name,
-            )
 
 
 class ClearmlNodeHook:
@@ -149,11 +135,7 @@ class ClearmlNodeHook:
             is_async: Whether the node was run in ``async`` mode.
             run_id: The id of the run.
         """
-        task = Task.init(
-            project_name=f"kedro_test/{run_id}",
-            task_name=node.name,
-            reuse_last_task_id=False,
-        )
+        task = Task.current_task()
         # only parameters will be logged. Artifacts must be declared manually in the catalog
         params_inputs = {}
         for k, v in inputs.items():
@@ -169,26 +151,6 @@ class ClearmlNodeHook:
                 d=params_inputs, recursive=self.recursive, sep=self.sep
             )
         task.connect(params_inputs)
-
-    @hook_impl
-    def after_node_run(
-        self,
-        node: Node,
-        catalog: DataCatalog,
-        inputs: Dict[str, Any],
-        is_async: bool,
-        run_id: str,
-    ) -> None:
-        # here we check if we have a ClearML dataset, if that is the case we keep
-        # the current task open so that the artifact can be uploaded. In this case
-        # the save function of the clearml artifact class will take care of closing the task
-        datasets = [getattr(catalog.datasets, out) for out in node.outputs]
-        has_clearml_artifact_dataset = any(
-            ["clearml" in d.__module__ for d in datasets]
-        )
-        if not has_clearml_artifact_dataset:
-            task = Task.current_task()
-            task.close()
 
 
 def _generate_kedro_command(

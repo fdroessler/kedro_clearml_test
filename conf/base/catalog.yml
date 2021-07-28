@@ -64,13 +64,17 @@ preprocessed_companies:
   layer: intermediate
 
 preprocessed_shuttles:
-  type: pandas.CSVDataSet
-  filepath: data/02_intermediate/preprocessed_shuttles.csv
+  type: kedro_tutorial.io.clearml_artifact_dataset.ClearMLArtifactDataSet
+  data_set:
+    type: pandas.CSVDataSet
+    filepath: data/02_intermediate/preprocessed_shuttles.csv
   layer: intermediate
 
 model_input_table:
-  type: pandas.CSVDataSet
-  filepath: data/03_primary/model_input_table.csv
+  type: kedro_tutorial.io.clearml_artifact_dataset.ClearMLArtifactDataSet
+  data_set:
+    type: pandas.CSVDataSet
+    filepath: data/03_primary/model_input_table.csv
   layer: primary
 
 regressor:

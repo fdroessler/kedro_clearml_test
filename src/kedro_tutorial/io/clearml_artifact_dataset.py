@@ -68,9 +68,6 @@ class ClearMLArtifactDataSet(AbstractVersionedDataSet):
                                 "tags": [f"run_id: {self.run_id}"],
                             },
                         )
-                        # import IPython
-
-                        # IPython.embed()
                         if len(tasks) > 1:
                             raise ValueError(
                                 "There should not be more than one run with the same run_id"
@@ -94,7 +91,6 @@ class ClearMLArtifactDataSet(AbstractVersionedDataSet):
                         # TODO: If it is a "viewable" object upload it directly otherwise upload the saved file
                         task.upload_artifact(Path(local_path).name, local_path)
                         task.upload_artifact(f"rep_{Path(local_path).stem}", data)
-                        task.close()
 
         # rename the class
         parent_name = data_set.__name__
