@@ -63,7 +63,7 @@ class ClearMLArtifactDataSet(AbstractVersionedDataSet):
                         # if a run id is specified, we have to use mlflow client
                         # to avoid potential conflicts with an already active run
                         tasks = Task.get_tasks(
-                            project_name="kedro_test",
+                            project_name="kedro_track_nodes",
                             task_filter={
                                 "tags": [f"run_id: {self.run_id}"],
                             },

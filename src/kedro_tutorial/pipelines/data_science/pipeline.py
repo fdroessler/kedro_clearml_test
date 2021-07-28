@@ -51,5 +51,6 @@ def create_pipeline(**kwargs):
                 outputs=None,
                 name="evaluate_model_node",
             ),
-        ]
+        ],
+        tags="DS Pipeline",
     )

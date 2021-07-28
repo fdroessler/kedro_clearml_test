@@ -91,7 +91,7 @@ class ClearmlPipelinehook:
         """
         # project name should be read from config file
         task = Task.init(
-            project_name="kedro_test",
+            project_name="kedro_track_nodes",
             task_name="pipeline",
             task_type=Task.TaskTypes.controller,
             reuse_last_task_id=False,
@@ -112,13 +112,13 @@ class ClearmlPipelinehook:
 
     @hook_impl
     def after_pipeline_run(self, run_params, run_result, pipeline, catalog):
-        task = Task.get_task(project_name="kedro_test", task_name="pipeline")
+        task = Task.get_task(project_name="kedro_track_nodes", task_name="pipeline")
         pipe = PipelineController()
         for k, v in pipeline.node_dependencies.items():
             pipe.add_step(
                 name=k.name.rsplit("_node", 1)[0],
                 parents=[vv.name for vv in v],
-                base_task_project="kedro_test",
+                base_task_project=f"kedro_track_nodes/{list(k.tags)[0]}",
                 base_task_name=k.name,
             )
 
@@ -150,7 +150,7 @@ class ClearmlNodeHook:
             run_id: The id of the run.
         """
         task = Task.init(
-            project_name=f"kedro_test/{run_id}",
+            project_name=f"kedro_track_nodes/{list(node.tags)[0]}",
             task_name=node.name,
             reuse_last_task_id=False,
         )
