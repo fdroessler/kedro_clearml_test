@@ -51,5 +51,6 @@ def create_pipeline(**kwargs):
                 outputs="model_input_table",
                 name="create_model_input_table_node",
             ),
-        ]
+        ],
+        tags="DE Pipeline",
     )

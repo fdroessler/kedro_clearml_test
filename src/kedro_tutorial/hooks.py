@@ -91,8 +91,9 @@ class ClearmlPipelinehook:
         """
         # project name should be read from config file
         task = Task.init(
-            project_name="kedro_track_all",
-            task_name="full_pipeline",
+            project_name="kedro_track_nodes",
+            task_name="pipeline",
+            task_type=Task.TaskTypes.controller,
             reuse_last_task_id=False,
         )
         task.add_tags([f"{k}: {v}" for k, v in run_params.items() if v])
@@ -107,6 +108,19 @@ class ClearmlPipelinehook:
             pipeline_name=run_params["pipeline_name"],
         )
         task.add_tags([f"kedro_command: {kedro_command}"])
+        task.close()
+
+    @hook_impl
+    def after_pipeline_run(self, run_params, run_result, pipeline, catalog):
+        task = Task.get_task(project_name="kedro_track_nodes", task_name="pipeline")
+        pipe = PipelineController()
+        for k, v in pipeline.node_dependencies.items():
+            pipe.add_step(
+                name=k.name.rsplit("_node", 1)[0],
+                parents=[vv.name for vv in v],
+                base_task_project=f"kedro_track_nodes/{list(k.tags)[0]}",
+                base_task_name=k.name,
+            )
 
 
 class ClearmlNodeHook:
@@ -135,7 +149,11 @@ class ClearmlNodeHook:
             is_async: Whether the node was run in ``async`` mode.
             run_id: The id of the run.
         """
-        task = Task.current_task()
+        task = Task.init(
+            project_name=f"kedro_track_nodes/{list(node.tags)[0]}",
+            task_name=node.name,
+            reuse_last_task_id=False,
+        )
         # only parameters will be logged. Artifacts must be declared manually in the catalog
         params_inputs = {}
         for k, v in inputs.items():
