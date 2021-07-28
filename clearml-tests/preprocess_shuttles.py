@@ -5,6 +5,8 @@ from tempfile import mkdtemp
 from pathlib import Path
 import openpyxl
 
+openpyxl.__version__
+
 # create an dataset experiment
 task = Task.init(
     project_name="kedro_tutorial_clearml/de", task_name="preprocess_shuttles"

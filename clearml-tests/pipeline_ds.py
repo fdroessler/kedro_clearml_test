@@ -6,27 +6,21 @@ from clearml.automation.controller import PipelineController
 # from here on everything is logged automatically
 task = Task.init(
     project_name="kedro_tutorial_clearml",
-    task_name="DE pipeline",
+    task_name="DS pipeline",
     task_type=Task.TaskTypes.controller,
     reuse_last_task_id=False,
 )
 
 pipe = PipelineController(default_execution_queue="default")
 pipe.add_step(
-    name="companies",
-    base_task_project="kedro_tutorial_clearml/de",
-    base_task_name="preprocess_companies",
+    name="split",
+    base_task_project="kedro_tutorial_clearml/ds",
+    base_task_name="split_data",
 )
 pipe.add_step(
-    name="shuttles",
-    base_task_project="kedro_tutorial_clearml/de",
-    base_task_name="preprocess_shuttles",
-)
-pipe.add_step(
-    name="input_table",
-    parents=["companies", "shuttles"],
-    base_task_project="kedro_tutorial_clearml/de",
-    base_task_name="create_model_input_table",
+    name="train",
+    base_task_project="kedro_tutorial_clearml/ds",
+    base_task_name="train_model",
 )
 
 # Starting the pipeline (in the background)
