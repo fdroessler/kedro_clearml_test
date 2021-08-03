@@ -35,7 +35,7 @@ from sklearn.model_selection import train_test_split
 from clearml import Logger
 
 
-def split_data(data: pd.DataFrame, parameters: Dict) -> Tuple:
+def split_data(data: pd.DataFrame, parameters: Dict, p) -> Tuple:
     """Splits data into features and targets training and test sets.
 
     Args:
