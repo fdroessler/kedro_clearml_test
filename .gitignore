@@ -1,4 +1,6 @@
 **/*.csv
+lightning_logs
+MNIST
 
 ##########################
 # KEDRO PROJECT

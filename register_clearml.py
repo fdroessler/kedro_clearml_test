@@ -1,5 +1,6 @@
 # <project_root>/register_prefect_flow.py
 from pathlib import Path
+from typing import Iterable
 
 import click
 
@@ -17,6 +18,7 @@ from functools import partial
 import pickle
 from clearml.automation.controller import PipelineController
 import pandas as pd
+import datetime
 
 PROJECT_NAME = "kedro_clearml_pipeline"
 
@@ -46,11 +48,12 @@ def new_func(f, datasets, parameters, outputs, inputs):
             task.close()
     kwargs = {**kwargs, **parameters}
     results = f(**kwargs)
+    if not isinstance(results, (list, tuple)):
+        results = [results]
     results = dict(zip(outputs, results))
     task = Task.current_task()
     for name, res in results.items():
         task.add_tags(name)
-        task.upload_artifact(f"{name}_df", res, wait_on_upload=True)
         task.upload_artifact(name, pickle.dumps(res), wait_on_upload=True)
 
 
@@ -95,8 +98,7 @@ def build_and_register_flow(pipeline_name, env):
 
     task = Task.init(
         project_name=PROJECT_NAME,
-        task_type=Task.TaskTypes.controller,
-        task_name="overview",
+        task_name="overview_" + "{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now()),
         reuse_last_task_id=False,
     )
 
@@ -104,7 +106,7 @@ def build_and_register_flow(pipeline_name, env):
         pipe = PipelineController(
             default_execution_queue="default", add_pipeline_tags=False
         )
-    for node, parent_node in pipeline.node_dependencies.items():
+    for n, (node, parent_node) in enumerate(pipeline.node_dependencies.items()):
         input_to_arg_mapping = dict(
             zip(
                 node.inputs,
@@ -125,11 +127,13 @@ def build_and_register_flow(pipeline_name, env):
         task_name = task.create_function_task(
             func_to_run,
             node.name,
+            node.name,
             datasets=datasets,
             parameters=params_inputs,
             outputs=node.outputs,
             inputs=node.inputs,
         )
+        task_name.add_tags(["{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now()), n])
         if task_name is not None:
             pipe.add_step(
                 name=node.name,
@@ -144,28 +148,6 @@ def build_and_register_flow(pipeline_name, env):
         pipe.wait()
         # cleanup everything
         pipe.stop()
-
-        print("done")
-
-    # for node, parent_nodes in pipeline.node_dependencies.items():
-    #     if node._unique_key not in tasks:
-    #         node_task = KedroTask(node, catalog)
-    #         tasks[node._unique_key] = node_task
-    #     else:
-    #         node_task = tasks[node._unique_key]
-
-    #     parent_tasks = []
-
-    #     for parent in parent_nodes:
-    #         if parent._unique_key not in tasks:
-    #             parent_task = KedroTask(parent, catalog)
-    #             tasks[parent._unique_key] = parent_task
-    #         else:
-    #             parent_task = tasks[parent._unique_key]
-
-    #         parent_tasks.append(parent_task)
-
-    #     flow.set_dependencies(task=node_task, upstream_tasks=parent_tasks)
 
 
 if __name__ == "__main__":
