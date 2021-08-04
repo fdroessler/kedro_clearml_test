@@ -37,6 +37,7 @@ from kedro.pipeline import Pipeline
 from kedro.pipeline.node import Node
 from clearml import Task
 from kedro.versioning.journal import _git_sha
+from functools import partial
 
 from clearml.automation.controller import PipelineController
 
@@ -89,11 +90,11 @@ class ClearmlPipelinehook:
             pipeline: The ``Pipeline`` that will be run.
             catalog: The ``DataCatalog`` to be used during the run.
         """
+        pass
         # project name should be read from config file
         task = Task.init(
             project_name="kedro_track_nodes",
             task_name="pipeline",
-            task_type=Task.TaskTypes.controller,
             reuse_last_task_id=False,
         )
         task.add_tags([f"{k}: {v}" for k, v in run_params.items() if v])
@@ -109,18 +110,6 @@ class ClearmlPipelinehook:
         )
         task.add_tags([f"kedro_command: {kedro_command}"])
         task.close()
-
-    @hook_impl
-    def after_pipeline_run(self, run_params, run_result, pipeline, catalog):
-        task = Task.get_task(project_name="kedro_track_nodes", task_name="pipeline")
-        pipe = PipelineController()
-        for k, v in pipeline.node_dependencies.items():
-            pipe.add_step(
-                name=k.name.rsplit("_node", 1)[0],
-                parents=[vv.name for vv in v],
-                base_task_project=f"kedro_track_nodes/{list(k.tags)[0]}",
-                base_task_name=k.name,
-            )
 
 
 class ClearmlNodeHook:
@@ -154,20 +143,25 @@ class ClearmlNodeHook:
             task_name=node.name,
             reuse_last_task_id=False,
         )
+
         # only parameters will be logged. Artifacts must be declared manually in the catalog
         params_inputs = {}
+        datasets = []
         for k, v in inputs.items():
             # detect parameters automatically based on kedro reserved names
             if k.startswith("params:"):
-                params_inputs[k[7:]] = v
+                params_inputs[k] = v
             elif k == "parameters":
                 params_inputs[k] = v
+            else:
+                datasets.append(k)
 
         # dictionary parameters may be flattened for readibility
         if self.flatten:
             params_inputs = flatten_dict(
                 d=params_inputs, recursive=self.recursive, sep=self.sep
             )
+
         task.connect(params_inputs)
 
     @hook_impl

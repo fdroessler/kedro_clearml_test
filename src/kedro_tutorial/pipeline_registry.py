@@ -31,8 +31,9 @@ from typing import Dict
 
 from kedro.pipeline import Pipeline
 
-from kedro_tutorial.pipelines import data_processing as dp
+from kedro_tutorial.pipelines import data_processing as dp, pytorch_lightning
 from kedro_tutorial.pipelines import data_science as ds
+from kedro_tutorial.pipelines import pytorch_lightning as pl
 
 
 def register_pipelines() -> Dict[str, Pipeline]:
@@ -44,6 +45,7 @@ def register_pipelines() -> Dict[str, Pipeline]:
     """
     data_processing_pipeline = dp.create_pipeline()
     data_science_pipeline = ds.create_pipeline()
+    pytorch_lightning_pipeline = pl.create_pipeline()
 
     return {
         "__default__": data_processing_pipeline + data_science_pipeline,

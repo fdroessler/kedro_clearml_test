@@ -70,9 +70,12 @@ def preprocess_shuttles(shuttles: pd.DataFrame) -> pd.DataFrame:
         Preprocessed data, with `price` converted to a float and `d_check_complete`,
         `moon_clearance_complete` converted to boolean.
     """
-    shuttles["d_check_complete"] = _is_true(shuttles["d_check_complete"])
-    shuttles["moon_clearance_complete"] = _is_true(shuttles["moon_clearance_complete"])
-    shuttles["price"] = _parse_money(shuttles["price"])
+    # shuttles["d_check_complete"] = _is_true(shuttles["d_check_complete"])
+    # shuttles["moon_clearance_complete"] = _is_true(shuttles["moon_clearance_complete"])
+    # shuttles["price"] = _parse_money(shuttles["price"])
+    # shuttles["price"] = shuttles["price"].str.replace("$", "").str.replace(",", "")
+    # shuttles["price"] = shuttles["price"].astype(float)
+
     return shuttles
 
 

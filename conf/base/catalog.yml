@@ -51,9 +51,13 @@ reviews:
   filepath: data/01_raw/reviews.csv
   layer: raw
 
+# shuttles:
+#   type: pandas.ExcelDataSet
+#   filepath: data/01_raw/shuttles.xlsx
+#   layer: raw
 shuttles:
-  type: pandas.ExcelDataSet
-  filepath: data/01_raw/shuttles.xlsx
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/shuttles.csv
   layer: raw
 
 preprocessed_companies:
