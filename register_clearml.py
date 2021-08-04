@@ -21,6 +21,7 @@ import pandas as pd
 import datetime
 
 PROJECT_NAME = "kedro_clearml_pipeline"
+TIMESTAMP = "{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now())
 
 
 def new_func(f, datasets, parameters, outputs, inputs):
@@ -98,7 +99,8 @@ def build_and_register_flow(pipeline_name, env):
 
     task = Task.init(
         project_name=PROJECT_NAME,
-        task_name="overview_" + "{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now()),
+        task_type=Task.TaskTypes.controller,
+        task_name="overview_" + TIMESTAMP,
         reuse_last_task_id=False,
     )
 
@@ -106,7 +108,7 @@ def build_and_register_flow(pipeline_name, env):
         pipe = PipelineController(
             default_execution_queue="default", add_pipeline_tags=False
         )
-    for n, (node, parent_node) in enumerate(pipeline.node_dependencies.items()):
+    for node, parent_node in pipeline.node_dependencies.items():
         input_to_arg_mapping = dict(
             zip(
                 node.inputs,
@@ -133,8 +135,8 @@ def build_and_register_flow(pipeline_name, env):
             outputs=node.outputs,
             inputs=node.inputs,
         )
-        task_name.add_tags(["{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now()), n])
         if task_name is not None:
+            task_name.add_tags([TIMESTAMP])
             pipe.add_step(
                 name=node.name,
                 base_task_project=PROJECT_NAME,
@@ -148,6 +150,7 @@ def build_and_register_flow(pipeline_name, env):
         pipe.wait()
         # cleanup everything
         pipe.stop()
+        print("done")
 
 
 if __name__ == "__main__":
