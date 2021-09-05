@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 import click
 
@@ -15,6 +16,7 @@ import pickle
 from clearml.automation.controller import PipelineController
 import pandas as pd
 import datetime
+from clearml import PipelineController
 
 PROJECT_NAME = "kedro_clearml_pipeline"
 TIMESTAMP = "{:%d-%m-%Y_%H:%M:%S}".format(datetime.datetime.now())
@@ -64,7 +66,9 @@ def upload_data_for_test(datasets, catalog):
         task_upload.upload_artifact(
             f"{data}", pickle.dumps(catalog.load(data)), wait_on_upload=True
         )
+    raw_data_urls = {k: v.url for k, v in task_upload.artifacts.items()}
     task_upload.close()
+    return raw_data_urls
 
 
 @click.command()
@@ -91,63 +95,98 @@ def build_and_register_flow(pipeline_name, env):
             and not isinstance(getattr(context.io.datasets, k), MemoryDataSet)
         )
     ]
-    upload_data_for_test(raw_datasets, catalog)
+    raw_data_urls = upload_data_for_test(raw_datasets, catalog)
 
-    task = Task.init(
-        project_name=PROJECT_NAME,
-        task_type=Task.TaskTypes.controller,
-        task_name="overview_" + TIMESTAMP,
-        reuse_last_task_id=False,
+    # task = Task.init(
+    #     project_name=PROJECT_NAME,
+    #     task_type=Task.TaskTypes.controller,
+    #     task_name="overview_" + TIMESTAMP,
+    #     reuse_last_task_id=False,
+    # )
+
+    # if task is not None:
+    #     pipe = PipelineController(
+    #         default_execution_queue="gpu_support",
+    #         add_pipeline_tags=False,
+    #     )
+
+    # create the pipeline controller
+    pipe = PipelineController(
+        project=PROJECT_NAME,
+        name="pipeline demo",
+        version="1.1",
+        add_pipeline_tags=False,
     )
-
-    if task is not None:
-        pipe = PipelineController(
-            default_execution_queue="gpu_support",
-            add_pipeline_tags=False,
-        )
-    for node, parent_node in pipeline.node_dependencies.items():
-        input_to_arg_mapping = dict(
-            zip(
-                node.inputs,
-                node.func.__code__.co_varnames[: node.func.__code__.co_argcount],
+    pipe.set_default_execution_queue("default")
+    for k, v in raw_data_urls.items():
+        pipe.add_parameter(name=k, description="url to pickle file", default=v)
+    for group in pipeline.grouped_nodes:
+        for node in group:
+            parent_nodes = pipeline.node_dependencies[node]
+            input_to_arg_mapping = dict(
+                zip(
+                    node.inputs,
+                    node.func.__code__.co_varnames[: node.func.__code__.co_argcount],
+                )
             )
-        )
-        params_inputs = {}
-        datasets = []
-        for inp in node.inputs:
-            # detect parameters automatically based on kedro reserved names
-            if inp.startswith("params:"):
-                params_inputs[input_to_arg_mapping[inp]] = catalog.load(inp)
-            elif inp == "parameters":
-                params_inputs[input_to_arg_mapping[inp]] = catalog.load(inp)
-            else:
-                datasets.append(inp)
-        func_to_run = partial(new_func, node.func)
-        task_name = task.create_function_task(
-            func_to_run,
-            node.name,
-            node.name,
-            datasets=datasets,
-            parameters=params_inputs,
-            outputs=node.outputs,
-            inputs=node.inputs,
-        )
-        if task_name is not None:
-            task_name.add_tags([TIMESTAMP])
-            pipe.add_step(
+            params_inputs = {}
+            for inp in node.inputs:
+                # detect parameters automatically based on kedro reserved names
+                if inp.startswith("params:"):
+                    params_inputs[input_to_arg_mapping[inp]] = catalog.load(inp)
+                elif inp == "parameters":
+                    params_inputs[input_to_arg_mapping[inp]] = catalog.load(inp)
+                else:
+                    if inp in raw_data_urls.keys():
+                        params_inputs[input_to_arg_mapping[inp]] = raw_data_urls[inp]
+                    else:
+                        for parent_node in parent_nodes:
+                            if inp in parent_node.outputs:
+                                params_inputs[
+                                    input_to_arg_mapping[inp]
+                                ] = f"${{{parent_node.name}.{inp}}}"
+            # func_to_run = partial(new_func, node.func)
+            pipe.add_function_step(
                 name=node.name,
-                base_task_project=PROJECT_NAME,
-                base_task_id=task_name.id,
-                parents=[vv.name for vv in parent_node],
+                function=node.func,
+                function_kwargs=params_inputs,
+                function_return=node.outputs
+                if isinstance(node.outputs, List)
+                else list(node.outputs),
+                cache_executed_step=True,
             )
-    if task is not None:
-        # Starting the pipeline (in the background)
-        pipe.start()
-        # Wait until pipeline terminates
-        pipe.wait()
-        # cleanup everything
-        pipe.stop()
-        print("done")
+        # pipe.add_function_step(
+        #     name="step_two",
+        #     # parents=['step_one'],  # the pipeline will automatically detect the dependencies based on the kwargs inputs
+        #     function=step_two,
+        #     function_kwargs=dict(data_frame="${step_one.data_frame}"),
+        #     function_return=node.outputs,
+        #     cache_executed_step=True,
+        # )
+        # task_name = task.create_function_task(
+        #     func_to_run,
+        #     node.name,
+        #     node.name,
+        #     datasets=datasets,
+        #     parameters=params_inputs,
+        #     outputs=node.outputs,
+        #     inputs=node.inputs,
+        # )
+        # if task_name is not None:
+        #     task_name.add_tags([TIMESTAMP])
+        #     pipe.add_step(
+        #         name=node.name,
+        #         base_task_project=PROJECT_NAME,
+        #         base_task_id=task_name.id,
+        #         parents=[vv.name for vv in parent_node],
+        #     )
+    # Starting the pipeline (in the background)
+    pipe.start()
+    # Wait until pipeline terminates
+    pipe.wait()
+    # cleanup everything
+    pipe.stop()
+    print("done")
 
 
 if __name__ == "__main__":
