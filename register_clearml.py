@@ -1,12 +1,8 @@
-# <project_root>/register_prefect_flow.py
 from pathlib import Path
-from typing import Iterable
 
 import click
 
 from clearml import Task
-from pandas.core.algorithms import isin
-from prefect.utilities.exceptions import ClientError
 
 from kedro.framework.project import pipelines
 from kedro.framework.session import KedroSession
@@ -106,7 +102,8 @@ def build_and_register_flow(pipeline_name, env):
 
     if task is not None:
         pipe = PipelineController(
-            default_execution_queue="default", add_pipeline_tags=False
+            default_execution_queue="gpu_support",
+            add_pipeline_tags=False,
         )
     for node, parent_node in pipeline.node_dependencies.items():
         input_to_arg_mapping = dict(
