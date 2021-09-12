@@ -97,19 +97,6 @@ def build_and_register_flow(pipeline_name, env):
     ]
     raw_data_urls = upload_data_for_test(raw_datasets, catalog)
 
-    # task = Task.init(
-    #     project_name=PROJECT_NAME,
-    #     task_type=Task.TaskTypes.controller,
-    #     task_name="overview_" + TIMESTAMP,
-    #     reuse_last_task_id=False,
-    # )
-
-    # if task is not None:
-    #     pipe = PipelineController(
-    #         default_execution_queue="gpu_support",
-    #         add_pipeline_tags=False,
-    #     )
-
     # create the pipeline controller
     pipe = PipelineController(
         project=PROJECT_NAME,
@@ -154,6 +141,7 @@ def build_and_register_flow(pipeline_name, env):
                 if isinstance(node.outputs, List)
                 else list(node.outputs),
                 cache_executed_step=True,
+                execution_queue="default",
             )
         # pipe.add_function_step(
         #     name="step_two",
